@@ -1,5 +1,3 @@
-# app/services/users_service.py
-
 import logging
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,7 +18,7 @@ class UserService:
         existing_user = await self.user_dao.get_by_email(db, user_in.email)
         if existing_user:
             logger.error(f"Регистрация: пользователь с email {user_in.email} уже существует")
-            raise UserAlreadyExistsException()  # Исключение с предопределённым статусом и сообщением
+            raise UserAlreadyExistsException()
         user_data = user_in.dict()
         user_data["hashed_password"] = get_password_hash(user_data["password"])
         user_data.pop("password")
@@ -41,9 +39,24 @@ class UserService:
         logger.info(f"Обновлены данные пользователя с id {user.id}")
         return user
 
-    async def get_user_by_id(self, db: AsyncSession, user_id: int) -> Optional[User]:
+    async def get_user_by_id(self, db: AsyncSession, user_id: int) -> User:
         user = await self.user_dao.get_by_id(db, user_id)
         if not user:
             logger.warning(f"Пользователь с id {user_id} не найден")
+            raise UserNotFoundException()
+        return user
+
+    async def get_user_by_email(self, db: AsyncSession, email: str) -> User:
+        user = await self.user_dao.get_by_email(db, email)
+        if not user:
+            logger.warning(f"Пользователь с email {email} не найден")
+            raise UserNotFoundException()
+        return user
+
+    # Новый метод для логина по username:
+    async def get_user_by_username(self, db: AsyncSession, username: str) -> User:
+        user = await self.user_dao.get_by_username(db, username)
+        if not user:
+            logger.warning(f"Пользователь с username {username} не найден")
             raise UserNotFoundException()
         return user

@@ -5,9 +5,7 @@ from typing import Optional, Dict, Any
 
 import jwt
 from passlib.context import CryptContext
-
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi import HTTPException, status, Request, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -15,24 +13,21 @@ from app.database.dependencies import get_db_session
 from app.exceptions.custom_exceptions import UserNotFoundException
 from app.models.users import User
 
-# Контекст для хэширования паролей с использованием bcrypt
+# Контекст для хэширования паролей (bcrypt)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# Определяем схему OAuth2 для извлечения токена из заголовков
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/users/login")
-
 def get_password_hash(password: str) -> str:
-    """Хэширует пароль с помощью bcrypt."""
+    """Возвращает bcrypt-хэш для переданного пароля."""
     return pwd_context.hash(password)
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Проверяет, соответствует ли открытый пароль его хэшированной версии."""
+    """Проверяет соответствие открытого пароля его хэшированной версии."""
     return pwd_context.verify(plain_password, hashed_password)
 
 def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta] = None) -> str:
     """
-    Создает JWT-токен с указанными данными и временем истечения.
-    Используется timezone-aware datetime.
+    Создаёт JWT-токен с указанными данными и сроком жизни.
+    Использует timezone-aware datetime.
     """
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + (expires_delta if expires_delta else timedelta(minutes=15))
@@ -42,8 +37,8 @@ def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta]
 
 def decode_access_token(token: str) -> Dict[str, Any]:
     """
-    Декодирует JWT-токен и возвращает его полезную нагрузку.
-    При ошибке декодирования возвращает пустой словарь.
+    Декодирует JWT-токен и возвращает его payload.
+    При ошибке возвращает пустой словарь.
     """
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
@@ -52,27 +47,48 @@ def decode_access_token(token: str) -> Dict[str, Any]:
         return {}
 
 async def get_current_user(
-    token: str = Depends(oauth2_scheme),
+    request: Request,
     db: AsyncSession = Depends(get_db_session)
 ) -> User:
     """
-    Извлекает текущего пользователя из JWT-токена.
-    Локально импортирует UserService, чтобы избежать циклического импорта.
+    Извлекает токен из заголовка или куки и возвращает текущего пользователя.
+    Если токен не найден или недействителен, генерирует 401.
     """
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+    token = None
+
+    # Проверяем заголовок Authorization
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.lower().startswith("bearer "):
+        token = auth_header[7:]
+    else:
+        # Если в заголовке нет, пробуем получить из куки
+        token = request.cookies.get("access_token")
+
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Необходима авторизация",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     payload = decode_access_token(token)
     user_id: Optional[str] = payload.get("sub")
     if user_id is None:
-        raise credentials_exception
-    # Локальный импорт для разрыва цикла
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Неверные учетные данные",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # Импортируем UserService локально, чтобы избежать циклического импорта
     from app.services.users_service import UserService
     user_service = UserService()
     try:
         user = await user_service.get_user_by_id(db, int(user_id))
     except UserNotFoundException:
-        raise credentials_exception
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Неверные учетные данные",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     return user

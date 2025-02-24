@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Body
+# app/api/v1/users.py
+
+from fastapi import APIRouter, Depends, HTTPException, status, Body, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import verify_password, create_access_token
@@ -31,14 +33,14 @@ async def update_user(user_id: int, user_in: UserUpdate, db: AsyncSession = Depe
     except UserNotFoundException as e:
         raise HTTPException(status_code=e.status_code, detail=e.detail)
 
-# Исправленный эндпоинт логина:
 @router.post("/login")
 async def login(
+    response: Response,
     form_data: LoginForm = Body(...),
-    db: AsyncSession = Depends(get_db_session)
+    db: AsyncSession = Depends(get_db_session),  # Просто объявляем параметр типа Response
 ):
     try:
-        # Используем метод для поиска по username
+        # Ищем пользователя по username
         user = await user_service.get_user_by_username(db, form_data.username)
     except UserNotFoundException:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Неверные учетные данные")
@@ -47,4 +49,15 @@ async def login(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Неверные учетные данные")
 
     token = create_access_token({"sub": str(user.id)})
+
+    # Устанавливаем куку с токеном: HTTPOnly, срок жизни 15 минут
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        max_age=900,
+        expires=900,
+        samesite="lax"
+    )
+
     return {"access_token": token, "token_type": "bearer"}

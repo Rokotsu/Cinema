@@ -2,11 +2,11 @@
 
 import logging
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dao.subscriptions_dao import SubscriptionDAO
-from app.schemas.subscriptions import SubscriptionCreate, SubscriptionUpdate
+from app.schemas.subscriptions import SubscriptionCreateInput, SubscriptionUpdate
 from app.models.subscriptions import Subscription
 from app.exceptions.custom_exceptions import SubscriptionNotFoundException
 
@@ -16,11 +16,11 @@ class SubscriptionService:
     def __init__(self, subscription_dao: Optional[SubscriptionDAO] = None):
         self.subscription_dao = subscription_dao or SubscriptionDAO()
 
-    async def create_subscription(self, db: AsyncSession, sub_in: SubscriptionCreate) -> Subscription:
-        data = sub_in.dict()
-        if not data.get("start_date"):
-            data["start_date"] = datetime.utcnow()
-        subscription = await self.subscription_dao.create(db, data)
+    async def create_subscription(self, db: AsyncSession, sub_data: dict) -> Subscription:
+        # Если start_date отсутствует, задаем его как текущую дату (timezone-aware)
+        if not sub_data.get("start_date"):
+            sub_data["start_date"] = datetime.now(timezone.utc)
+        subscription = await self.subscription_dao.create(db, sub_data)
         logger.info(f"Создана подписка с id {subscription.id} для пользователя {subscription.user_id}")
         return subscription
 
@@ -29,11 +29,12 @@ class SubscriptionService:
         if not subscription:
             logger.error(f"Подписка с id {sub_id} не найдена")
             raise SubscriptionNotFoundException()
-        subscription = await self.subscription_dao.update(db, subscription, sub_in.dict(exclude_unset=True))
+        updated_data = sub_in.dict(exclude_unset=True)
+        subscription = await self.subscription_dao.update(db, subscription, updated_data)
         logger.info(f"Подписка с id {subscription.id} обновлена")
         return subscription
 
-    async def get_subscription(self, db: AsyncSession, sub_id: int) -> Optional[Subscription]:
+    async def get_subscription(self, db: AsyncSession, sub_id: int) -> Subscription:
         subscription = await self.subscription_dao.get_by_id(db, sub_id)
         if not subscription:
             logger.warning(f"Подписка с id {sub_id} не найдена")
@@ -44,3 +45,10 @@ class SubscriptionService:
         subscriptions = await self.subscription_dao.list(db, skip, limit)
         logger.info(f"Получено {len(subscriptions)} подписок")
         return subscriptions
+
+    async def get_active_subscription(self, db: AsyncSession, user_id: int):
+        subscriptions = await self.subscription_dao.list(db, skip=0, limit=100)
+        for sub in subscriptions:
+            if sub.user_id == user_id and sub.status.value == "active":
+                return sub
+        return None

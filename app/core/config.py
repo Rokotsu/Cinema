@@ -1,6 +1,5 @@
-from typing import Literal
 from pydantic_settings import BaseSettings
-
+from typing import Literal
 
 class Settings(BaseSettings):
     MODE: Literal["DEV", "TEST", "PROD"]
@@ -18,8 +17,12 @@ class Settings(BaseSettings):
     REDIS_HOST: str
     REDIS_PORT: int
 
-    # Добавляем явное указание TEST_DATABASE_URL
     TEST_DATABASE_URL: str = ""
+
+    # Stripe настройки
+    STRIPE_SECRET_KEY: str
+    STRIPE_PUBLISHABLE_KEY: str
+    STRIPE_WEBHOOK_SECRET: str
 
     @property
     def DATABASE_URL(self) -> str:
@@ -29,6 +32,5 @@ class Settings(BaseSettings):
 
     class Config:
         env_file = ".env"
-
 
 settings = Settings()

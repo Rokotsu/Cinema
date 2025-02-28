@@ -36,3 +36,33 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db_ses
             subscription_service = SubscriptionService()
             await subscription_service.update_subscription(db, payment.subscription_id, {"status": "active"})
     return {"status": "success"}
+
+@router.post("/initiate_test_checkout")
+async def create_checkout_session_for_test(
+    db: AsyncSession = Depends(get_db_session)
+):
+    """
+    Создаёт тестовую Stripe Checkout Session для одного платёжного цикла
+    (mode="payment"). Возвращает ссылку на оплату.
+    """
+    # Указываем тестовый секретный ключ из вашего .env (sk_test_...)
+    stripe.api_key = settings.STRIPE_SECRET_KEY
+
+    # Здесь вы можете задать любую сумму, например 5000 центов = $50
+    session = stripe.checkout.Session.create(
+        payment_method_types=["card"],
+        line_items=[{
+            "price_data": {
+                "currency": "usd",
+                "product_data": {"name": "Тестовая подписка"},
+                "unit_amount": 5000,  # 50.00 USD (в центах)
+            },
+            "quantity": 1,
+        }],
+        mode="payment",
+        success_url="http://localhost:8000/success?session_id={CHECKOUT_SESSION_ID}",
+        cancel_url="http://localhost:8000/cancel",
+    )
+
+    # Возвращаем ссылку, по которой можно пройти процесс оплаты
+    return {"checkout_url": session.url}

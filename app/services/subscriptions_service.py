@@ -1,4 +1,6 @@
 # app/services/subscriptions_service.py
+from sqlalchemy import select
+from app.models.subscriptions import Subscription, SubscriptionStatus
 
 import logging
 from typing import List, Optional
@@ -7,7 +9,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dao.subscriptions_dao import SubscriptionDAO
 from app.schemas.subscriptions import SubscriptionCreateInput, SubscriptionUpdate
-from app.models.subscriptions import Subscription
 from app.exceptions.custom_exceptions import SubscriptionNotFoundException
 
 logger = logging.getLogger(__name__)
@@ -17,7 +18,6 @@ class SubscriptionService:
         self.subscription_dao = subscription_dao or SubscriptionDAO()
 
     async def create_subscription(self, db: AsyncSession, sub_data: dict) -> Subscription:
-        # Если start_date отсутствует, задаем его как текущую дату (timezone-aware)
         if not sub_data.get("start_date"):
             sub_data["start_date"] = datetime.now(timezone.utc)
         subscription = await self.subscription_dao.create(db, sub_data)
@@ -52,3 +52,21 @@ class SubscriptionService:
             if sub.user_id == user_id and sub.status.value == "active":
                 return sub
         return None
+
+    async def get_active_subscription_for_plan(
+        self,
+        db: AsyncSession,
+        user_id: int,
+        required_plan: str
+    ) -> Optional[Subscription]:
+        """
+        Возвращает активную подписку с указанным планом для заданного пользователя, если такая существует.
+        """
+        query = (
+            select(Subscription)
+            .where(Subscription.user_id == user_id)
+            .where(Subscription.status == SubscriptionStatus.ACTIVE)
+            .where(Subscription.plan == required_plan)
+        )
+        result = await db.execute(query)
+        return result.scalars().first()

@@ -1,3 +1,4 @@
+# File: app/models/payments.py
 from datetime import datetime, timezone
 import enum
 from sqlalchemy import Column, Integer, Float, String, DateTime, Enum, ForeignKey
@@ -16,8 +17,8 @@ class Payment(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     subscription_id = Column(Integer, ForeignKey("subscriptions.id"), nullable=True)
     amount = Column(Float, nullable=False)
-    currency = Column(String(10), default="RUB")  # Валюта платежа
-    payment_method = Column(String(50))  # Например, "robokassa", "tinkoff", "yoomoney"
+    currency = Column(String(10), default="RUB")
+    payment_method = Column(String(50))
     status = Column(Enum(PaymentStatus), default=PaymentStatus.PENDING, nullable=False)
     transaction_id = Column(String(255), unique=True, nullable=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))

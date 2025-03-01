@@ -1,12 +1,11 @@
-# app/schemas/subscriptions.py
-
+# File: app/schemas/subscriptions.py
 from datetime import datetime
 from enum import Enum
 from typing import Optional
 from pydantic import BaseModel
 
 class SubscriptionStatus(str, Enum):
-    pending = "pending"      # добавлено
+    pending = "pending"
     active = "active"
     expired = "expired"
     cancelled = "cancelled"
@@ -17,12 +16,10 @@ class SubscriptionBase(BaseModel):
     end_date: Optional[datetime] = None
     status: Optional[SubscriptionStatus] = SubscriptionStatus.pending
 
-# Схема для создания подписки – без поля user_id
-class SubscriptionCreateInput(SubscriptionBase):
+class SubscriptionCreate(SubscriptionBase):
     class Config:
         extra = "forbid"
 
-# Схема для чтения подписки – включает поле user_id
 class SubscriptionRead(SubscriptionBase):
     id: int
     user_id: int
@@ -31,8 +28,8 @@ class SubscriptionRead(SubscriptionBase):
 
     class Config:
         orm_mode = True
+        from_attributes = True  # Добавлено для поддержки from_orm
 
-# Схема для обновления подписки (без поля user_id)
 class SubscriptionUpdate(BaseModel):
     plan: Optional[str] = None
     start_date: Optional[datetime] = None

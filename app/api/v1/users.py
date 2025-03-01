@@ -1,5 +1,4 @@
-# app/api/v1/users.py
-
+# File: app/api/v1/users.py
 from fastapi import APIRouter, Depends, HTTPException, status, Body, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.users import UserCreate, UserRead, UserUpdate, LoginForm
@@ -70,3 +69,8 @@ async def login(
         samesite="lax"
     )
     return {"access_token": token, "token_type": "bearer"}
+
+@router.post("/logout")
+async def logout(response: Response):
+    response.delete_cookie("access_token")
+    return {"message": "Вы успешно разлогинились"}

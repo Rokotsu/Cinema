@@ -1,5 +1,4 @@
-# app/dao/base.py
-
+# File: app/dao/base.py
 import enum
 from typing import Any, Dict
 from collections import deque
@@ -11,12 +10,7 @@ from app.database.base import Base
 
 ModelType = TypeVar("ModelType", bound=Base)
 
-
 def _normalize_obj_in(obj_in: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Преобразует словарь, заменяя все значения, являющиеся экземплярами enum,
-    на их строковое представление в верхнем регистре.
-    """
     return {k: (v.value.upper() if isinstance(v, enum.Enum) else v) for k, v in obj_in.items()}
 
 class BaseDAO(Generic[ModelType]):

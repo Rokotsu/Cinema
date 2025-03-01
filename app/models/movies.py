@@ -1,5 +1,6 @@
+# File: app/models/movies.py
 from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, String, Text, DateTime, Float, Boolean
+from sqlalchemy import Column, Integer, String, Text, DateTime, Float
 from app.database.base import Base
 
 class Movie(Base):
@@ -9,13 +10,8 @@ class Movie(Base):
     title = Column(String(255), nullable=False, index=True)
     description = Column(Text)
     release_date = Column(DateTime(timezone=True), nullable=True)
-    duration = Column(Integer)  # Продолжительность в минутах
+    duration = Column(Integer)
     rating = Column(Float, default=0.0)
-    subscription_required = Column(Boolean, default=False, nullable=False)
-
-    # Новое поле для указания, какой план подписки требуется. Например, "Basic", "Premium" и т.п.
-    required_plan = Column(String(50), nullable=True, default=None)
-
+    required_subscription = Column(String(50), nullable=True)  # NEW: указывает, какая подписка нужна для просмотра (если не указано – фильм бесплатный)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc),
-                        onupdate=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))

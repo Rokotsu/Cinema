@@ -1,14 +1,11 @@
-# app/services/subscriptions_service.py
-from sqlalchemy import select
-from app.models.subscriptions import Subscription, SubscriptionStatus
-
+# File: app/services/subscriptions_service.py
 import logging
 from typing import List, Optional
 from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.dao.subscriptions_dao import SubscriptionDAO
-from app.schemas.subscriptions import SubscriptionCreateInput, SubscriptionUpdate
+from app.schemas.subscriptions import SubscriptionCreate, SubscriptionUpdate
+from app.models.subscriptions import Subscription
 from app.exceptions.custom_exceptions import SubscriptionNotFoundException
 
 logger = logging.getLogger(__name__)
@@ -24,12 +21,15 @@ class SubscriptionService:
         logger.info(f"Создана подписка с id {subscription.id} для пользователя {subscription.user_id}")
         return subscription
 
-    async def update_subscription(self, db: AsyncSession, sub_id: int, sub_in: SubscriptionUpdate) -> Subscription:
+    async def update_subscription(self, db: AsyncSession, sub_id: int, sub_in) -> Subscription:
         subscription = await self.subscription_dao.get_by_id(db, sub_id)
         if not subscription:
             logger.error(f"Подписка с id {sub_id} не найдена")
             raise SubscriptionNotFoundException()
-        updated_data = sub_in.dict(exclude_unset=True)
+        if isinstance(sub_in, dict):
+            updated_data = sub_in
+        else:
+            updated_data = sub_in.dict(exclude_unset=True)
         subscription = await self.subscription_dao.update(db, subscription, updated_data)
         logger.info(f"Подписка с id {subscription.id} обновлена")
         return subscription
@@ -49,24 +49,7 @@ class SubscriptionService:
     async def get_active_subscription(self, db: AsyncSession, user_id: int):
         subscriptions = await self.subscription_dao.list(db, skip=0, limit=100)
         for sub in subscriptions:
-            if sub.user_id == user_id and sub.status.value == "active":
+            # Приводим значение статуса к нижнему регистру для корректного сравнения
+            if sub.user_id == user_id and sub.status.value.lower() == "active":
                 return sub
         return None
-
-    async def get_active_subscription_for_plan(
-        self,
-        db: AsyncSession,
-        user_id: int,
-        required_plan: str
-    ) -> Optional[Subscription]:
-        """
-        Возвращает активную подписку с указанным планом для заданного пользователя, если такая существует.
-        """
-        query = (
-            select(Subscription)
-            .where(Subscription.user_id == user_id)
-            .where(Subscription.status == SubscriptionStatus.ACTIVE)
-            .where(Subscription.plan == required_plan)
-        )
-        result = await db.execute(query)
-        return result.scalars().first()

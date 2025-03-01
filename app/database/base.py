@@ -1,3 +1,4 @@
+# File: app/database/base.py
 from sqlalchemy import NullPool
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
@@ -17,4 +18,3 @@ async_session_maker = async_sessionmaker(engine, expire_on_commit=False)
 
 class Base(DeclarativeBase):
     pass
-

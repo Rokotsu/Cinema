@@ -1,5 +1,4 @@
-# app/core/security.py
-
+# File: app/core/security.py
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
 
@@ -14,7 +13,7 @@ from app.exceptions.custom_exceptions import UserNotFoundException
 from app.models.users import User
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme =  "Bearer"  # Фиктивное значение; на самом деле мы извлекаем токен из заголовка или куки
+oauth2_scheme = "Bearer"  # Фиктивное значение; на самом деле мы извлекаем токен из заголовка или куки
 
 def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
@@ -60,7 +59,7 @@ async def get_current_user(
             detail="Неверные учетные данные",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    from app.services.users_service import UserService  # локальный импорт для избежания цикла
+    from app.services.users_service import UserService
     user_service = UserService()
     try:
         user = await user_service.get_user_by_id(db, int(user_id))

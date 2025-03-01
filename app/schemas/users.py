@@ -1,17 +1,14 @@
-# app/schemas/users.py
-
+# File: app/schemas/users.py
 from datetime import datetime
 from enum import Enum
 from pydantic import BaseModel, EmailStr, Field
-
 
 class LoginForm(BaseModel):
     username: str
     password: str
 
     class Config:
-        extra = "forbid"  # запрещает передачу дополнительных полей
-
+        extra = "forbid"
 
 class UserRole(str, Enum):
     ADMIN = "admin"
@@ -37,4 +34,4 @@ class UserRead(UserBase):
 
     class Config:
         orm_mode = True
-        extra = "ignore"  # Игнорировать дополнительные поля
+        extra = "ignore"

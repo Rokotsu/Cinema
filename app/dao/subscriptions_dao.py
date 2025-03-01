@@ -1,5 +1,4 @@
-# app/dao/subscriptions_dao.py
-
+# File: app/dao/subscriptions_dao.py
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.subscriptions import Subscription
 from app.dao.base import BaseDAO

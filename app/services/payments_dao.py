@@ -1,3 +1,4 @@
+# File: app/services/payments_dao.py
 import stripe
 import logging
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,9 +35,7 @@ class PaymentService:
         return payment
 
     async def initiate_payment(self, db: AsyncSession, payment_in: PaymentCreate) -> dict:
-        # Создаем запись платежа в БД
         payment = await self.create_payment(db, payment_in)
-        # Используем id платежа в качестве order_id (в Stripe можно передать через metadata)
         order_id = str(payment.id)
         stripe.api_key = settings.STRIPE_SECRET_KEY
         try:
@@ -46,16 +45,17 @@ class PaymentService:
                     "price_data": {
                         "currency": "usd",
                         "product_data": {"name": "Оплата подписки"},
-                        "unit_amount": int(payment.amount * 100)  # сумма в центах
+                        "unit_amount": int(payment.amount * 100)
                     },
                     "quantity": 1,
                 }],
-                mode="payment",  # для единичного платежа; для рекуррентных подписок mode="subscription"
+                mode="payment",
                 success_url="http://localhost:8000/success?session_id={CHECKOUT_SESSION_ID}",
                 cancel_url="http://localhost:8000/cancel",
                 metadata={"order_id": order_id}
             )
             logger.info(f"Создан Stripe Checkout Session для платежа {payment.id}")
-            return {"payment_id": payment.id, "sessionId": checkout_session.id}
+            # Возвращаем ссылку на Stripe Checkout, а не только session ID
+            return {"payment_id": payment.id, "checkout_url": checkout_session.url}
         except Exception as e:
             raise Exception(f"Ошибка Stripe: {str(e)}")

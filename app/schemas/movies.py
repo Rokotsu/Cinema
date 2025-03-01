@@ -1,16 +1,15 @@
+# File: app/schemas/movies.py
 from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel
 
-# Базовая схема для фильма/сериала
 class MovieBase(BaseModel):
     title: str
     description: Optional[str] = None
     release_date: Optional[datetime] = None
-    duration: Optional[int] = None  # Продолжительность в минутах
+    duration: Optional[int] = None
     rating: Optional[float] = 0.0
-    subscription_required: bool = False
-    required_plan: Optional[str] = None  # <--- Добавляем поле для уровня подписки
+    required_subscription: Optional[str] = None  # NEW: указывает необходимую подписку для просмотра
 
 class MovieCreate(MovieBase):
     title: str
@@ -21,8 +20,7 @@ class MovieUpdate(BaseModel):
     release_date: Optional[datetime] = None
     duration: Optional[int] = None
     rating: Optional[float] = None
-    subscription_required: Optional[bool] = None
-    required_plan: Optional[str] = None  # <--- При обновлении тоже можно менять план
+    required_subscription: Optional[str] = None  # NEW
 
 class MovieRead(MovieBase):
     id: int

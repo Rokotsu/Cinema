@@ -1,9 +1,7 @@
-# app/services/users_service.py
-
+# File: app/services/users_service.py
 import logging
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.dao.users_dao import UserDAO
 from app.schemas.users import UserCreate, UserUpdate
 from app.models.users import User

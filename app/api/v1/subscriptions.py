@@ -1,6 +1,7 @@
 # File: app/api/v1/subscriptions.py
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Form
 from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import datetime, timezone
 from app.schemas.subscriptions import (
     SubscriptionCreate,
     SubscriptionRead,
@@ -18,19 +19,28 @@ subscription_service = SubscriptionService()
 
 @router.post("/purchase", status_code=status.HTTP_200_OK)
 async def purchase_subscription(
-    sub_in: SubscriptionCreate,
+    plan: str = Form(..., example="Premium"),
+    start_date: str = Form(default=str(datetime.now(timezone.utc).isoformat()),
+                           example="2025-03-02T00:00:00Z"),
+    end_date: str = Form(default=str(datetime.now(timezone.utc).isoformat()),
+                         example="2025-04-02T00:00:00Z"),
     db: AsyncSession = Depends(get_db_session),
     current_user: User = Depends(get_current_user)
 ):
-    # Проверяем, есть ли у пользователя уже подписка со статусом pending или active
     user_subscriptions = await subscription_service.list_subscriptions(db, skip=0, limit=100)
     for sub in user_subscriptions:
-        # Приводим статус к нижнему регистру для сравнения
         if sub.user_id == current_user.id and sub.status.value.lower() in ["pending", "active"]:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"У вас уже есть подписка: {sub.plan} со статусом {sub.status.value}. Завершите оплату, чтобы продолжить."
             )
+    sd = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
+    ed = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
+    sub_in = SubscriptionCreate(
+        plan=plan,
+        start_date=sd,
+        end_date=ed
+    )
     sub_data = sub_in.model_dump()
     sub_data["user_id"] = current_user.id
     sub_data["status"] = SubscriptionStatus.pending
@@ -46,7 +56,6 @@ async def get_my_subscription(
     current_user: User = Depends(get_current_user)
 ):
     subscriptions = await subscription_service.list_subscriptions(db, skip=0, limit=100)
-    # Находим подписку пользователя со статусом pending или active
     user_sub = next((sub for sub in subscriptions if sub.user_id == current_user.id and sub.status.value.lower() in ["pending", "active"]), None)
     if not user_sub:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Подписка не найдена.")

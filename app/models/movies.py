@@ -10,8 +10,12 @@ class Movie(Base):
     title = Column(String(255), nullable=False, index=True)
     description = Column(Text)
     release_date = Column(DateTime(timezone=True), nullable=True)
-    duration = Column(Integer)
+    duration = Column(Integer)  # продолжительность фильма в минутах
     rating = Column(Float, default=0.0)
-    required_subscription = Column(String(50), nullable=True)  # NEW: указывает, какая подписка нужна для просмотра (если не указано – фильм бесплатный)
+    genre = Column(String(50), nullable=True)       # жанр фильма, например "Comedy", "Horror"
+    country = Column(String(50), nullable=True)       # страна производства
+    type = Column(String(20), nullable=True)          # "movie" или "series"
+    age_rating = Column(Integer, nullable=True)       # минимальный возраст (например, 18)
+    required_subscription = Column(String(50), nullable=True)  # если указан, для просмотра требуется подписка
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))

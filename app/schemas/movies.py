@@ -9,7 +9,11 @@ class MovieBase(BaseModel):
     release_date: Optional[datetime] = None
     duration: Optional[int] = None
     rating: Optional[float] = 0.0
-    required_subscription: Optional[str] = None  # NEW: указывает необходимую подписку для просмотра
+    genre: Optional[str] = None
+    country: Optional[str] = None
+    type: Optional[str] = None       # "movie" или "series"
+    age_rating: Optional[int] = None
+    required_subscription: Optional[str] = None
 
 class MovieCreate(MovieBase):
     title: str
@@ -20,7 +24,11 @@ class MovieUpdate(BaseModel):
     release_date: Optional[datetime] = None
     duration: Optional[int] = None
     rating: Optional[float] = None
-    required_subscription: Optional[str] = None  # NEW
+    genre: Optional[str] = None
+    country: Optional[str] = None
+    type: Optional[str] = None
+    age_rating: Optional[int] = None
+    required_subscription: Optional[str] = None
 
 class MovieRead(MovieBase):
     id: int

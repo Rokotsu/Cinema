@@ -33,3 +33,7 @@ class PaymentNotFoundException(BaseAppException):
 class PaymentProcessingException(BaseAppException):
     status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
     detail = "Ошибка обработки платежа"
+
+class ReviewNotFoundException(BaseAppException):
+    status_code = status.HTTP_404_NOT_FOUND
+    detail = "Отзыв не найден"

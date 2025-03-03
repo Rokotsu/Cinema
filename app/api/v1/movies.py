@@ -1,7 +1,8 @@
 # File: app/api/v1/movies.py
-from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, status, Form, Query, Cookie
 from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import datetime, timezone
 from app.schemas.movies import MovieCreate, MovieRead, MovieUpdate
 from app.services.movies_service import MovieService
 from app.database.dependencies import get_db_session
@@ -14,8 +15,59 @@ router = APIRouter(prefix="/movies", tags=["movies"])
 movie_service = MovieService()
 
 @router.post("/", response_model=MovieRead, status_code=status.HTTP_201_CREATED)
-async def create_movie(movie_in: MovieCreate, db: AsyncSession = Depends(get_db_session)):
+async def create_movie(
+    title: str = Form(..., example="Inception"),
+    description: str = Form(None, example="A mind-bending thriller"),
+    release_date: str = Form(default=str(datetime.now(timezone.utc).isoformat()),
+                             example="2020-01-01T00:00:00Z"),
+    duration: int = Form(..., example=148),
+    rating: float = Form(..., example=8.8),
+    genre: str = Form(None, example="Comedy"),
+    country: str = Form(None, example="USA"),
+    type_: str = Form(None, alias="type", example="movie"),
+    age_rating: int = Form(0, example=18),
+    required_subscription: str = Form(None, example="Premium"),
+    db: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(get_current_user)
+):
+    # Только администратор может создавать фильм
+    if current_user.role != "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Доступ запрещён")
+    rd = None
+    if release_date:
+        try:
+            rd = datetime.fromisoformat(release_date.replace("Z", "+00:00"))
+        except ValueError:
+            raise HTTPException(
+                status_code=422,
+                detail="Неверный формат release_date. Ожидается ISO формат, например: 2020-01-01T00:00:00Z"
+            )
+    movie_in = MovieCreate(
+        title=title,
+        description=description,
+        release_date=rd,
+        duration=duration,
+        rating=rating,
+        genre=genre,
+        country=country,
+        type=type_,
+        age_rating=age_rating,
+        required_subscription=required_subscription
+    )
     return await movie_service.create_movie(db, movie_in)
+
+@router.get("/", response_model=List[MovieRead])
+async def list_movies(
+    db: AsyncSession = Depends(get_db_session),
+    genre: Optional[str] = Query(None, example="Comedy"),
+    country: Optional[str] = Query(None, example="USA"),
+    type_: Optional[str] = Query(None, alias="type", example="movie"),
+    release_year_from: Optional[int] = Query(None, example=2010),
+    release_year_to: Optional[int] = Query(None, example=2020),
+    rating_min: Optional[float] = Query(None, example=5.0),
+    rating_max: Optional[float] = Query(None, example=9.0)
+):
+    return await movie_service.list_movies(db, genre, country, type_, release_year_from, release_year_to, rating_min, rating_max)
 
 @router.get("/{movie_id}", response_model=MovieRead)
 async def get_movie(movie_id: int, db: AsyncSession = Depends(get_db_session)):
@@ -25,28 +77,33 @@ async def get_movie(movie_id: int, db: AsyncSession = Depends(get_db_session)):
         raise HTTPException(status_code=e.status_code, detail=e.detail)
 
 @router.put("/{movie_id}", response_model=MovieRead)
-async def update_movie(movie_id: int, movie_in: MovieUpdate, db: AsyncSession = Depends(get_db_session)):
+async def update_movie(movie_id: int, movie_in: MovieUpdate, db: AsyncSession = Depends(get_db_session), current_user: User = Depends(get_current_user)):
+    # Обновлять фильм может только админ
+    if current_user.role != "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Доступ запрещён")
     try:
         return await movie_service.update_movie(db, movie_id, movie_in)
     except MovieNotFoundException as e:
         raise HTTPException(status_code=e.status_code, detail=e.detail)
 
-@router.get("/", response_model=List[MovieRead])
-async def list_movies(db: AsyncSession = Depends(get_db_session)):
-    return await movie_service.list_movies(db)
-
 @router.get("/{movie_id}/watch")
 async def watch_movie(
     movie_id: int,
     db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    age_confirmed: Optional[str] = Cookie(None)
 ):
     movie = await movie_service.get_movie(db, movie_id)
-    # Если фильм бесплатный (поле required_subscription не заполнено) – разрешаем просмотр
+    # Если фильм имеет возрастное ограничение 18+ и пользователь не подтвердил возраст
+    if movie.age_rating and movie.age_rating >= 18:
+        if age_confirmed != "true":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Для просмотра данного фильма необходимо подтвердить, что вам 18+."
+            )
     if not movie.required_subscription:
         return {"movie_id": movie.id, "stream_url": f"http://example.com/stream/{movie.id}"}
-
-    # Если фильм требует подписки, проверяем наличие активной (оплаченной) подписки
+    from app.services.subscriptions_service import SubscriptionService
     subscription_service = SubscriptionService()
     subscription = await subscription_service.get_active_subscription(db, current_user.id)
     if not subscription:
@@ -54,7 +111,6 @@ async def watch_movie(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Подписка не оформлена или не оплачена. Пожалуйста, оформите и оплатите подписку перед просмотром."
         )
-    # Сравниваем планы подписки без учета регистра
     if subscription.plan.lower() != movie.required_subscription.lower():
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

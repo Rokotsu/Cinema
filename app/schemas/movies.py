@@ -34,6 +34,8 @@ class MovieRead(MovieBase):
     id: int
     created_at: datetime
     updated_at: datetime
+    duration_formatted: Optional[str] = None  # новое поле
 
     class Config:
         orm_mode = True
+        from_attributes = True

@@ -1,7 +1,7 @@
 # File: app/api/v1/subscriptions.py
 from fastapi import APIRouter, Depends, HTTPException, status, Form
 from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from app.schemas.subscriptions import (
     SubscriptionCreate,
     SubscriptionRead,
@@ -22,8 +22,7 @@ async def purchase_subscription(
     plan: str = Form(..., example="Premium"),
     start_date: str = Form(default=str(datetime.now(timezone.utc).isoformat()),
                            example="2025-03-02T00:00:00Z"),
-    end_date: str = Form(default=str(datetime.now(timezone.utc).isoformat()),
-                         example="2025-04-02T00:00:00Z"),
+    end_date: str = Form(default="", example=""),  # если пусто, расчитываем автоматически
     db: AsyncSession = Depends(get_db_session),
     current_user: User = Depends(get_current_user)
 ):
@@ -35,7 +34,10 @@ async def purchase_subscription(
                 detail=f"У вас уже есть подписка: {sub.plan} со статусом {sub.status.value}. Завершите оплату, чтобы продолжить."
             )
     sd = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
-    ed = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
+    if end_date.strip() == "":
+        ed = sd + timedelta(days=30)
+    else:
+        ed = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
     sub_in = SubscriptionCreate(
         plan=plan,
         start_date=sd,
@@ -50,13 +52,16 @@ async def purchase_subscription(
         "subscription": SubscriptionRead.from_orm(new_subscription)
     }
 
-@router.get("/me", response_model=SubscriptionRead)
-async def get_my_subscription(
-    db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(get_current_user)
-):
-    subscriptions = await subscription_service.list_subscriptions(db, skip=0, limit=100)
-    user_sub = next((sub for sub in subscriptions if sub.user_id == current_user.id and sub.status.value.lower() in ["pending", "active"]), None)
-    if not user_sub:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Подписка не найдена.")
-    return SubscriptionRead.from_orm(user_sub)
+@router.get("/{subscription_id}", response_model=SubscriptionRead)
+async def get_subscription(subscription_id: int, db: AsyncSession = Depends(get_db_session)):
+    try:
+        return await subscription_service.get_subscription(db, subscription_id)
+    except SubscriptionNotFoundException as e:
+        raise HTTPException(status_code=e.status_code, detail=e.detail)
+
+@router.put("/{subscription_id}", response_model=SubscriptionRead)
+async def update_subscription(subscription_id: int, sub_in: SubscriptionUpdate, db: AsyncSession = Depends(get_db_session)):
+    try:
+        return await subscription_service.update_subscription(db, subscription_id, sub_in)
+    except SubscriptionNotFoundException as e:
+        raise HTTPException(status_code=e.status_code, detail=e.detail)

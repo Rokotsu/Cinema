@@ -49,7 +49,13 @@ class SubscriptionService:
     async def get_active_subscription(self, db: AsyncSession, user_id: int):
         subscriptions = await self.subscription_dao.list(db, skip=0, limit=100)
         for sub in subscriptions:
-            # Приводим значение статуса к нижнему регистру для корректного сравнения
             if sub.user_id == user_id and sub.status.value.lower() == "active":
+                return sub
+        return None
+
+    async def get_subscription_by_plan(self, db: AsyncSession, user_id: int, plan: str) -> Optional[Subscription]:
+        subscriptions = await self.subscription_dao.list(db, skip=0, limit=1000)
+        for sub in subscriptions:
+            if sub.user_id == user_id and sub.plan.lower() == plan.lower():
                 return sub
         return None

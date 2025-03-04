@@ -3,6 +3,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional
 from pydantic import BaseModel
+from app.schemas.users import UserRead
 
 class SubscriptionStatus(str, Enum):
     pending = "pending"
@@ -28,7 +29,7 @@ class SubscriptionRead(SubscriptionBase):
 
     class Config:
         orm_mode = True
-        from_attributes = True  # Добавлено для поддержки from_orm
+        from_attributes = True
 
 class SubscriptionUpdate(BaseModel):
     plan: Optional[str] = None
@@ -38,3 +39,11 @@ class SubscriptionUpdate(BaseModel):
 
     class Config:
         extra = "forbid"
+
+class SubscriptionInfo(BaseModel):
+    user: UserRead
+    subscription: SubscriptionRead
+    remaining_days: int
+
+    class Config:
+        orm_mode = True

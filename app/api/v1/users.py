@@ -1,12 +1,20 @@
 # File: app/api/v1/users.py
 from fastapi import APIRouter, Depends, HTTPException, status, Form, Response
 from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import datetime, timezone, timedelta
 from pydantic import EmailStr
-from app.schemas.users import UserCreate, UserRead, UserUpdate, LoginForm
+from typing import Optional
+
+from app.schemas.users import (
+    UserCreate, UserRead, UserUpdate, LoginForm, UserWithSubscription
+)
 from app.services.users_service import UserService
+from app.services.subscriptions_service import SubscriptionService
+from app.schemas.subscriptions import SubscriptionRead
 from app.database.dependencies import get_db_session
 from app.exceptions.custom_exceptions import UserAlreadyExistsException, UserNotFoundException
-from app.core.security import verify_password, create_access_token
+from app.core.security import verify_password, create_access_token, get_current_user
+from app.models.users import User
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -27,28 +35,31 @@ async def create_user(
     except UserAlreadyExistsException as e:
         raise HTTPException(status_code=e.status_code, detail=e.detail)
 
-@router.get("/{user_id}", response_model=UserRead)
-async def get_user(
-    user_id: int,
+# Новый маршрут для получения информации о залогиненном пользователе
+@router.get("/me", response_model=UserWithSubscription)
+async def get_me_info(
     db: AsyncSession = Depends(get_db_session),
-    user_service: UserService = Depends(get_user_service)
+    current_user: User = Depends(get_current_user)
 ):
-    try:
-        return await user_service.get_user_by_id(db, user_id)
-    except UserNotFoundException as e:
-        raise HTTPException(status_code=e.status_code, detail=e.detail)
-
-@router.put("/{user_id}", response_model=UserRead)
-async def update_user(
-    user_id: int,
-    user_in: UserUpdate,  # PUT остаётся с JSON‑телом
-    db: AsyncSession = Depends(get_db_session),
-    user_service: UserService = Depends(get_user_service)
-):
-    try:
-        return await user_service.update_user(db, user_id, user_in)
-    except UserNotFoundException as e:
-        raise HTTPException(status_code=e.status_code, detail=e.detail)
+    subscription_service = SubscriptionService()
+    subscriptions = await subscription_service.list_subscriptions(db, skip=0, limit=100)
+    user_sub = next((sub for sub in subscriptions if sub.user_id == current_user.id and sub.status.value.lower() == "active"), None)
+    now = datetime.now(timezone.utc)
+    if user_sub:
+        end_date = user_sub.end_date if user_sub.end_date else (user_sub.start_date + timedelta(days=30))
+        remaining_days = (end_date - now).days
+        if remaining_days < 0:
+            remaining_days = 0
+        msg = "Подписка активна"
+    else:
+        remaining_days = 0
+        msg = "Подписка отсутствует"
+    return UserWithSubscription(
+        user=UserRead.from_orm(current_user),
+        subscription=SubscriptionRead.from_orm(user_sub) if user_sub else None,
+        remaining_days=remaining_days,
+        message=msg
+    )
 
 @router.post("/login")
 async def login(
@@ -83,6 +94,28 @@ async def logout(response: Response):
 
 @router.post("/confirm_age")
 async def confirm_age(response: Response):
-    # Устанавливаем cookie, подтверждающее, что пользователю 18+
     response.set_cookie(key="age_confirmed", value="true", httponly=True)
     return {"message": "Возраст подтверждён"}
+
+@router.get("/{user_id}", response_model=UserRead)
+async def get_user(
+    user_id: int,
+    db: AsyncSession = Depends(get_db_session),
+    user_service: UserService = Depends(get_user_service)
+):
+    try:
+        return await user_service.get_user_by_id(db, user_id)
+    except UserNotFoundException as e:
+        raise HTTPException(status_code=e.status_code, detail=e.detail)
+
+@router.put("/{user_id}", response_model=UserRead)
+async def update_user(
+    user_id: int,
+    user_in: UserUpdate,  # PUT остается с JSON-телом
+    db: AsyncSession = Depends(get_db_session),
+    user_service: UserService = Depends(get_user_service)
+):
+    try:
+        return await user_service.update_user(db, user_id, user_in)
+    except UserNotFoundException as e:
+        raise HTTPException(status_code=e.status_code, detail=e.detail)

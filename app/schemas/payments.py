@@ -16,7 +16,7 @@ class PaymentBase(BaseModel):
 
 class PaymentCreate(PaymentBase):
     user_id: int
-    subscription_id: Optional[int] = None
+    subscription_plan: Optional[str] = None  # Новое поле: план подписки по названию
 
 class PaymentUpdate(BaseModel):
     amount: Optional[float] = None
@@ -28,7 +28,7 @@ class PaymentUpdate(BaseModel):
 class PaymentRead(PaymentBase):
     id: int
     user_id: int
-    subscription_id: Optional[int] = None
+    # Убираем поле subscription_id, так как теперь работаем по плану подписки
     status: PaymentStatus
     transaction_id: Optional[str] = None
     created_at: datetime

@@ -20,7 +20,7 @@ async def create_movie(
     description: str = Form(None, example="A mind-bending thriller"),
     release_date: str = Form(default=str(datetime.now(timezone.utc).isoformat()),
                              example="2020-01-01T00:00:00Z"),
-    duration: int = Form(..., example=148),
+    duration: int = Form(..., example=70),
     rating: float = Form(..., example=8.8),
     genre: str = Form(None, example="Comedy"),
     country: str = Form(None, example="USA"),
@@ -31,7 +31,7 @@ async def create_movie(
     current_user: User = Depends(get_current_user)
 ):
     # Только администратор может создавать фильм
-    if current_user.role != "admin":
+    if current_user.role.value != "ADMIN":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Доступ запрещён")
     rd = None
     if release_date:
@@ -65,21 +65,52 @@ async def list_movies(
     release_year_from: Optional[int] = Query(None, example=2010),
     release_year_to: Optional[int] = Query(None, example=2020),
     rating_min: Optional[float] = Query(None, example=5.0),
-    rating_max: Optional[float] = Query(None, example=9.0)
+    rating_max: Optional[float] = Query(None, example=9.0),
+    search: Optional[str] = Query(None, example="thriller"),
+    sort_by: Optional[str] = Query("release_date", example="rating"),
+    order: Optional[str] = Query("desc", example="asc"),
+    skip: int = Query(0, example=0),
+    limit: int = Query(100, example=50)
 ):
-    return await movie_service.list_movies(db, genre, country, type_, release_year_from, release_year_to, rating_min, rating_max)
+    return await movie_service.list_movies(
+        db,
+        genre,
+        country,
+        type_,
+        release_year_from,
+        release_year_to,
+        rating_min,
+        rating_max,
+        search,
+        sort_by,
+        order,
+        skip,
+        limit
+    )
 
 @router.get("/{movie_id}", response_model=MovieRead)
 async def get_movie(movie_id: int, db: AsyncSession = Depends(get_db_session)):
     try:
-        return await movie_service.get_movie(db, movie_id)
+        movie = await movie_service.get_movie(db, movie_id)
+        movie_data = MovieRead.from_orm(movie).dict()
+        # Оставляем поле duration как число
+        total_minutes = movie.duration if movie.duration is not None else 0
+        hours = total_minutes // 60
+        minutes = total_minutes % 60
+        if minutes:
+            formatted = f"{hours} час(а) {minutes} минут(ы)"
+        else:
+            formatted = f"{hours} час(а)"
+        # Добавляем новое поле для отформатированной длительности
+        movie_data["duration_formatted"] = formatted
+        return movie_data
     except MovieNotFoundException as e:
         raise HTTPException(status_code=e.status_code, detail=e.detail)
 
 @router.put("/{movie_id}", response_model=MovieRead)
 async def update_movie(movie_id: int, movie_in: MovieUpdate, db: AsyncSession = Depends(get_db_session), current_user: User = Depends(get_current_user)):
     # Обновлять фильм может только админ
-    if current_user.role != "admin":
+    if current_user.role.value != "ADMIN":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Доступ запрещён")
     try:
         return await movie_service.update_movie(db, movie_id, movie_in)
@@ -94,7 +125,7 @@ async def watch_movie(
     age_confirmed: Optional[str] = Cookie(None)
 ):
     movie = await movie_service.get_movie(db, movie_id)
-    # Если фильм имеет возрастное ограничение 18+ и пользователь не подтвердил возраст
+    # Если фильм имеет возрастное ограничение и пользователь не подтвердил возраст
     if movie.age_rating and movie.age_rating >= 18:
         if age_confirmed != "true":
             raise HTTPException(
@@ -103,7 +134,6 @@ async def watch_movie(
             )
     if not movie.required_subscription:
         return {"movie_id": movie.id, "stream_url": f"http://example.com/stream/{movie.id}"}
-    from app.services.subscriptions_service import SubscriptionService
     subscription_service = SubscriptionService()
     subscription = await subscription_service.get_active_subscription(db, current_user.id)
     if not subscription:

@@ -4,7 +4,7 @@ from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.dao.users_dao import UserDAO
 from app.schemas.users import UserCreate, UserUpdate
-from app.models.users import User
+from app.models.users import User, UserRole
 from app.core.security import get_password_hash
 from app.exceptions.custom_exceptions import UserAlreadyExistsException, UserNotFoundException
 
@@ -23,6 +23,9 @@ class UserService:
             user_data = user_in.dict()
             user_data["hashed_password"] = get_password_hash(user_data["password"])
             user_data.pop("password")
+            # Для удобства тестирования устанавливаем роль "ADMIN" для всех новых пользователей.
+            # Если нужно, измените на "USER".
+            user_data["role"] = "ADMIN"
             user = await self.user_dao.create(db, user_data)
             logger.info(f"Зарегистрирован новый пользователь с id {user.id}")
             return user

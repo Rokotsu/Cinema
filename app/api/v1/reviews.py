@@ -22,7 +22,7 @@ async def create_review(
     review = await review_service.create_review(db, review_in)
     return review
 
-@router.get("/movie/{movie_id}", response_model=list[ReviewRead])
+@router.get("/movie/{movie_id}", response_model=List[ReviewRead])
 async def get_reviews_for_movie(movie_id: int, db: AsyncSession = Depends(get_db_session)):
     reviews = await review_service.list_reviews_for_movie(db, movie_id)
     return reviews
@@ -30,7 +30,7 @@ async def get_reviews_for_movie(movie_id: int, db: AsyncSession = Depends(get_db
 @router.delete("/{review_id}", status_code=status.HTTP_200_OK)
 async def delete_review(review_id: int, db: AsyncSession = Depends(get_db_session), current_user: User = Depends(get_current_user)):
     # Удалять отзыв может только админ
-    if current_user.role != "admin":
+    if current_user.role.value != "ADMIN":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Доступ запрещён")
     review = await review_service.delete_review(db, review_id)
     return {"message": "Отзыв удалён", "review_id": review.id}
@@ -46,6 +46,6 @@ async def update_review(
     # Обновлять отзыв может только его автор или админ
     review_in = ReviewUpdate(rating=rating, comment=comment)
     review = await review_service.update_review(db, review_id, review_in)
-    if review.user_id != current_user.id and current_user.role != "admin":
+    if review.user_id != current_user.id and current_user.role.value != "ADMIN":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Доступ запрещён")
     return review

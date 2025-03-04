@@ -11,8 +11,8 @@ class LoginForm(BaseModel):
         extra = "forbid"
 
 class UserRole(str, Enum):
-    ADMIN = "admin"
-    USER = "user"
+    ADMIN = "ADMIN"
+    USER = "USER"
 
 class UserBase(BaseModel):
     email: EmailStr
@@ -34,4 +34,17 @@ class UserRead(UserBase):
 
     class Config:
         orm_mode = True
-        extra = "ignore"
+        from_attributes = True
+
+from typing import Optional
+from app.schemas.subscriptions import SubscriptionRead
+
+class UserWithSubscription(BaseModel):
+    user: UserRead
+    subscription: Optional[SubscriptionRead] = None
+    remaining_days: int
+    message: str
+
+    class Config:
+        orm_mode = True
+        from_attributes = True

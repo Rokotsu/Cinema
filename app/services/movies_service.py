@@ -2,7 +2,8 @@
 import logging
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, or_
+from datetime import datetime, timezone
 from app.dao.movies_dao import MovieDAO
 from app.schemas.movies import MovieCreate, MovieUpdate
 from app.models.movies import Movie
@@ -36,15 +37,22 @@ class MovieService:
             raise MovieNotFoundException()
         return movie
 
-    async def list_movies(self, db: AsyncSession,
-                          genre: Optional[str] = None,
-                          country: Optional[str] = None,
-                          type_: Optional[str] = None,
-                          release_year_from: Optional[int] = None,
-                          release_year_to: Optional[int] = None,
-                          rating_min: Optional[float] = None,
-                          rating_max: Optional[float] = None,
-                          skip: int = 0, limit: int = 100) -> List[Movie]:
+    async def list_movies(
+        self,
+        db: AsyncSession,
+        genre: Optional[str] = None,
+        country: Optional[str] = None,
+        type_: Optional[str] = None,
+        release_year_from: Optional[int] = None,
+        release_year_to: Optional[int] = None,
+        rating_min: Optional[float] = None,
+        rating_max: Optional[float] = None,
+        search: Optional[str] = None,
+        sort_by: Optional[str] = "release_date",  # по умолчанию сортировка по дате выпуска
+        order: Optional[str] = "desc",            # по умолчанию — от новых к старым
+        skip: int = 0,
+        limit: int = 100
+    ) -> List[Movie]:
         stmt = select(Movie)
         conditions = []
         if genre:
@@ -54,15 +62,31 @@ class MovieService:
         if type_:
             conditions.append(Movie.type.ilike(f"%{type_}%"))
         if release_year_from:
-            conditions.append(Movie.release_date >= f"{release_year_from}-01-01")
+            conditions.append(Movie.release_date >= datetime(release_year_from, 1, 1, tzinfo=timezone.utc))
         if release_year_to:
-            conditions.append(Movie.release_date <= f"{release_year_to}-12-31")
+            conditions.append(Movie.release_date <= datetime(release_year_to, 12, 31, tzinfo=timezone.utc))
         if rating_min is not None:
             conditions.append(Movie.rating >= rating_min)
         if rating_max is not None:
             conditions.append(Movie.rating <= rating_max)
+        if search:
+            conditions.append(or_(
+                Movie.title.ilike(f"%{search}%"),
+                Movie.description.ilike(f"%{search}%")
+            ))
         if conditions:
             stmt = stmt.where(and_(*conditions))
+        # Сортировка: разрешаем сортировать по rating, release_date, title
+        allowed_sort_fields = {
+            "rating": Movie.rating,
+            "release_date": Movie.release_date,
+            "title": Movie.title
+        }
+        sort_field = allowed_sort_fields.get(sort_by, Movie.release_date)
+        if order.lower() == "desc":
+            stmt = stmt.order_by(sort_field.desc())
+        else:
+            stmt = stmt.order_by(sort_field.asc())
         stmt = stmt.offset(skip).limit(limit)
         result = await db.execute(stmt)
         movies = result.scalars().all()

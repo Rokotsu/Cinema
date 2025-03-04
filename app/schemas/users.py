@@ -1,6 +1,7 @@
 # File: app/schemas/users.py
 from datetime import datetime
 from enum import Enum
+from typing import Optional
 from pydantic import BaseModel, EmailStr, Field
 
 class LoginForm(BaseModel):
@@ -9,6 +10,7 @@ class LoginForm(BaseModel):
 
     class Config:
         extra = "forbid"
+        allow_population_by_field_name = True
 
 class UserRole(str, Enum):
     ADMIN = "ADMIN"
@@ -22,9 +24,9 @@ class UserCreate(UserBase):
     password: str = Field(..., min_length=8)
 
 class UserUpdate(BaseModel):
-    email: EmailStr | None = None
-    username: str | None = None
-    password: str | None = Field(None, min_length=8)
+    email: Optional[EmailStr] = None
+    username: Optional[str] = None
+    password: Optional[str] = Field(None, min_length=8)
 
 class UserRead(UserBase):
     id: int

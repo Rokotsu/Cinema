@@ -1,6 +1,6 @@
 # File: app/api/main.py
 from fastapi import FastAPI
-from app.api.v1 import users, movies, subscriptions, payments
+from app.api.v1 import users, movies, subscriptions, payments, reviews  # добавлен reviews
 
 app = FastAPI(
     title="Онлайн кинотеатр",
@@ -12,13 +12,12 @@ app.include_router(users.router)
 app.include_router(movies.router)
 app.include_router(subscriptions.router)
 app.include_router(payments.router)
+app.include_router(reviews.router)  # подключение ручек отзывов
 
-# Новый endpoint для успешного завершения оплаты
 @app.get("/success")
 async def payment_success(session_id: str):
     return {"message": "Оплата прошла успешно!", "session_id": session_id}
 
-# Новый endpoint для отмены оплаты
 @app.get("/cancel")
 async def payment_cancel():
     return {"message": "Оплата отменена."}

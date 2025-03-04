@@ -34,7 +34,7 @@ class MovieRead(MovieBase):
     id: int
     created_at: datetime
     updated_at: datetime
-    duration_formatted: Optional[str] = None  # новое поле
+    duration_formatted: Optional[str] = None  # Новое поле для форматированной продолжительности
 
     class Config:
         orm_mode = True

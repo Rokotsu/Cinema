@@ -2,7 +2,7 @@
 from datetime import datetime
 from enum import Enum
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 class PaymentStatus(str, Enum):
     PENDING = "pending"
@@ -10,27 +10,26 @@ class PaymentStatus(str, Enum):
     FAILED = "failed"
 
 class PaymentBase(BaseModel):
-    amount: float
-    currency: Optional[str] = "RUB"
-    payment_method: Optional[str] = None
+    amount: float = Field(..., title="Amount")
+    currency: Optional[str] = Field("RUB", title="Currency")
+    payment_method: Optional[str] = Field(None, title="Payment Method")
 
 class PaymentCreate(PaymentBase):
-    user_id: int
-    subscription_plan: Optional[str] = None  # Новое поле: план подписки по названию
+    user_id: int = Field(..., title="User ID")
+    subscription_id: int = Field(..., title="Subscription ID")
 
 class PaymentUpdate(BaseModel):
-    amount: Optional[float] = None
-    currency: Optional[str] = None
-    payment_method: Optional[str] = None
-    status: Optional[PaymentStatus] = None
-    transaction_id: Optional[str] = None
+    amount: Optional[float] = Field(None, title="Amount")
+    currency: Optional[str] = Field(None, title="Currency")
+    payment_method: Optional[str] = Field(None, title="Payment Method")
+    status: Optional[PaymentStatus] = Field(None, title="Status")
+    transaction_id: Optional[str] = Field(None, title="Transaction ID")
 
 class PaymentRead(PaymentBase):
     id: int
     user_id: int
-    # Убираем поле subscription_id, так как теперь работаем по плану подписки
     status: PaymentStatus
-    transaction_id: Optional[str] = None
+    transaction_id: Optional[str] = Field(None, title="Transaction ID")
     created_at: datetime
     updated_at: datetime
 

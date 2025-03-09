@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}Online Cinema - Watch Movies Online{% endblock %}
+
+{% block content %}
+<div class="hero-section position-relative overflow-hidden py-5 mb-5">
+    <div class="hero-bg"></div>
+    <div class="container position-relative">
+        <div class="row align-items-center min-vh-75">
+            <div class="col-lg-6">
+                <h1 class="display-4 fw-bold text-white mb-4 animate-up">Welcome to Online Cinema</h1>
+                <p class="lead text-white-75 mb-4 animate-up delay-1">Watch the latest movies and series from anywhere, anytime. Experience cinema at your fingertips.</p>
+                {% if not user %}
+                    <div class="animate-up delay-2">
+                        <a href="/auth/register" class="btn btn-primary btn-lg me-2 shadow-lg">Get Started</a>
+                        <a href="/auth/login" class="btn btn-outline-light btn-lg">Sign In</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<section class="popular-genres py-5 mb-5">
+    <div class="container">
+        <h2 class="section-title text-center mb-5">Popular Genres</h2>
+        <div class="row g-4">
+            {% for genre in ['Action', 'Comedy', 'Drama', 'Horror'] %}
+            <div class="col-md-3">
+                <div class="genre-card card h-100 shadow-lg hover-lift">
+                    <div class="card-body text-center">
+                        <i class="bi bi-film display-4 mb-3"></i>
+                        <h3 class="h5">{{ genre }}</h3>
+                        <a href="/movies?genre={{ genre }}" class="stretched-link"></a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<section class="latest-movies py-5 bg-dark-subtle">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="section-title mb-0">Latest Movies</h2>
+            <a href="/movies" class="btn btn-outline-primary">View All</a>
+        </div>
+        <div class="row g-4" 
+             hx-get="/movies?limit=4" 
+             hx-trigger="load"
+             hx-swap="innerHTML">
+            <div class="col-12 text-center">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="subscription-features py-5">
+    <div class="container">
+        <h2 class="section-title text-center mb-5">Why Choose Our Platform</h2>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="feature-card card h-100 shadow-lg hover-lift">
+                    <div class="card-body text-center p-4">
+                        <i class="bi bi-collection-play display-4 mb-3 text-primary"></i>
+                        <h3 class="h5">Extensive Library</h3>
+                        <p class="text-muted">Access thousands of movies and TV shows, from classics to the latest releases.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-card card h-100 shadow-lg hover-lift">
+                    <div class="card-body text-center p-4">
+                        <i class="bi bi-device-hdd display-4 mb-3 text-primary"></i>
+                        <h3 class="h5">Multi-device Access</h3>
+                        <p class="text-muted">Watch on your TV, laptop, tablet, or phone. Cancel or switch plans anytime.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-card card h-100 shadow-lg hover-lift">
+                    <div class="card-body text-center p-4">
+                        <i class="bi bi-stars display-4 mb-3 text-primary"></i>
+                        <h3 class="h5">HD Quality</h3>
+                        <p class="text-muted">Enjoy crystal clear picture quality with HD and 4K streaming options.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

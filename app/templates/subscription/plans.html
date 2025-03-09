@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+
+{% block title %}Subscription Plans - Online Cinema{% endblock %}
+
+{% block content %}
+<div class="subscription-header text-center py-5 mb-5">
+    <h1 class="display-4 mb-3 animate-up">Choose Your Perfect Plan</h1>
+    <p class="lead text-muted mb-0 animate-up delay-1">Watch unlimited movies and TV shows on your favorite devices</p>
+</div>
+
+<div class="container">
+    <div class="row row-cols-1 row-cols-md-3 g-4 justify-content-center">
+        <!-- Basic Plan -->
+        <div class="col animate-up">
+            <div class="card h-100 shadow-lg hover-lift">
+                <div class="card-body p-4">
+                    <div class="text-center mb-4">
+                        <i class="bi bi-play-circle display-4 text-primary"></i>
+                        <h5 class="card-title mt-3 mb-0">Basic</h5>
+                        <div class="pricing mt-3">
+                            <span class="h2">$9.99</span>
+                            <span class="text-muted">/month</span>
+                        </div>
+                    </div>
+                    <ul class="list-unstyled mt-4">
+                        <li class="mb-3">
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            HD streaming quality
+                        </li>
+                        <li class="mb-3">
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            Watch on 1 device at a time
+                        </li>
+                        <li class="mb-3">
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            Access to basic content library
+                        </li>
+                        <li class="mb-3">
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            Cancel anytime
+                        </li>
+                    </ul>
+                    <form hx-post="/subscriptions/purchase" 
+                          hx-swap="outerHTML"
+                          class="text-center mt-4">
+                        <input type="hidden" name="plan" value="basic">
+                        <button class="btn btn-outline-primary btn-lg w-100 shadow-sm">
+                            Choose Basic
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Standard Plan -->
+        <div class="col animate-up delay-1">
+            <div class="card h-100 shadow-lg hover-lift border-primary">
+                <div class="card-body p-4">
+                    <div class="ribbon">Most Popular</div>
+                    <div class="text-center mb-4">
+                        <i class="bi bi-play-circle-fill display-4 text-primary"></i>
+                        <h5 class="card-title mt-3 mb-0">Standard</h5>
+                        <div class="pricing mt-3">
+                            <span class="h2">$14.99</span>
+                            <span class="text-muted">/month</span>
+                        </div>
+                    </div>
+                    <ul class="list-unstyled mt-4">
+                        <li class="mb-3">
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            Full HD streaming quality
+                        </li>
+                        <li class="mb-3">
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            Watch on 2 devices at a time
+                        </li>
+                        <li class="mb-3">
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            Extended content library
+                        </li>
+                        <li class="mb-3">
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            No ads
+                        </li>
+                        <li class="mb-3">
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            Download content for offline viewing
+                        </li>
+                    </ul>
+                    <form hx-post="/subscriptions/purchase" 
+                          hx-swap="outerHTML"
+                          class="text-center mt-4">
+                        <input type="hidden" name="plan" value="standard">
+                        <button class="btn btn-primary btn-lg w-100 shadow">
+                            Choose Standard
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Premium Plan -->
+        <div class="col animate-up delay-2">
+            <div class="card h-100 shadow-lg hover-lift">
+                <div class="card-body p-4">
+                    <div class="text-center mb-4">
+                        <i class="bi bi-play-circle-fill display-4 text-primary"></i>
+                        <h5 class="card-title mt-3 mb-0">Premium</h5>
+                        <div class="pricing mt-3">
+                            <span class="h2">$19.99</span>
+                            <span class="text-muted">/month</span>
+                        </div>
+                    </div>
+                    <ul class="list-unstyled mt-4">
+                        <li class="mb-3">
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            4K Ultra HD + HDR
+                        </li>
+                        <li class="mb-3">
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            Watch on 4 devices at a time
+                        </li>
+                        <li class="mb-3">
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            Full content library access
+                        </li>
+                        <li class="mb-3">
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            Unlimited downloads
+                        </li>
+                        <li class="mb-3">
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            Priority customer support
+                        </li>
+                        <li class="mb-3">
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            Early access to new releases
+                        </li>
+                    </ul>
+                    <form hx-post="/subscriptions/purchase" 
+                          hx-swap="outerHTML"
+                          class="text-center mt-4">
+                        <input type="hidden" name="plan" value="premium">
+                        <button class="btn btn-outline-primary btn-lg w-100 shadow-sm">
+                            Choose Premium
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="subscription-features mt-5 pt-5">
+        <h2 class="text-center mb-5">All Plans Include</h2>
+        <div class="row row-cols-2 row-cols-md-4 g-4 text-center">
+            <div class="col">
+                <div class="feature-item">
+                    <i class="bi bi-device-hdd display-6 text-primary mb-3"></i>
+                    <h5>Watch Everywhere</h5>
+                    <p class="text-muted">Stream on your phone, tablet, laptop, and TV</p>
+                </div>
+            </div>
+            <div class="col">
+                <div class="feature-item">
+                    <i class="bi bi-calendar-check display-6 text-primary mb-3"></i>
+                    <h5>Cancel Anytime</h5>
+                    <p class="text-muted">No long-term contracts, no commitments</p>
+                </div>
+            </div>
+            <div class="col">
+                <div class="feature-item">
+                    <i class="bi bi-lightning-charge display-6 text-primary mb-3"></i>
+                    <h5>New Titles</h5>
+                    <p class="text-muted">New movies and shows added every week</p>
+                </div>
+            </div>
+            <div class="col">
+                <div class="feature-item">
+                    <i class="bi bi-shield-check display-6 text-primary mb-3"></i>
+                    <h5>Secure Streaming</h5>
+                    <p class="text-muted">End-to-end encrypted streaming</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

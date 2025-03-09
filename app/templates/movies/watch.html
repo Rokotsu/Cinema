@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Watch {{ movie.title }} - Online Cinema{% endblock %}
+
+{% block content %}
+<div class="movie-player-container">
+    {% if not age_confirmed and movie.age_rating >= 18 %}
+        <div class="alert alert-warning text-center p-5 shadow-lg animate-up">
+            <i class="bi bi-exclamation-triangle-fill display-4 text-warning mb-4"></i>
+            <h4 class="alert-heading">Age Verification Required</h4>
+            <p class="mb-4">This content requires age verification.</p>
+            <form hx-post="/users/confirm_age" 
+                  hx-target="closest div"
+                  hx-swap="outerHTML"
+                  class="max-w-sm mx-auto">
+                <div class="form-check mb-4">
+                    <input class="form-check-input" type="checkbox" id="age_confirmation" name="age_confirmed" required>
+                    <label class="form-check-label" for="age_confirmation">
+                        I confirm that I am 18 years or older
+                    </label>
+                </div>
+                <button type="submit" class="btn btn-warning btn-lg shadow">
+                    <i class="bi bi-shield-check me-2"></i>Confirm Age
+                </button>
+            </form>
+        </div>
+    {% elif not subscription_valid %}
+        <div class="alert alert-info text-center p-5 shadow-lg animate-up">
+            <i class="bi bi-stars display-4 text-primary mb-4"></i>
+            <h4 class="alert-heading">Premium Content</h4>
+            <p class="mb-4">This content requires a {{ movie.required_subscription }} subscription to watch.</p>
+            <div class="row justify-content-center">
+                <div class="col-md-8 col-lg-6">
+                    <div class="card bg-dark shadow">
+                        <div class="card-body p-4">
+                            <h5 class="card-title text-center mb-4">{{ movie.required_subscription }} Plan Benefits</h5>
+                            <ul class="list-unstyled">
+                                <li class="mb-3">
+                                    <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                    Access to premium content
+                                </li>
+                                <li class="mb-3">
+                                    <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                    HD/4K quality streaming
+                                </li>
+                                <li class="mb-3">
+                                    <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                    Watch on multiple devices
+                                </li>
+                            </ul>
+                            <a href="/subscription/plans" class="btn btn-primary btn-lg w-100 shadow">
+                                <i class="bi bi-arrow-right-circle me-2"></i>View Plans
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="movie-player shadow-lg rounded overflow-hidden">
+            <div class="ratio ratio-16x9">
+                <div class="bg-dark d-flex align-items-center justify-content-center">
+                    <div class="text-center">
+                        <i class="bi bi-play-circle display-1 mb-3"></i>
+                        <h3 class="text-light">{{ movie.title }}</h3>
+                        <p class="text-muted">Ready to play</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Movie Info -->
+        <div class="movie-info mt-4">
+            <div class="row">
+                <div class="col-md-8">
+                    <h2 class="mb-3">{{ movie.title }}</h2>
+                    <p class="lead text-muted">{{ movie.description }}</p>
+                    <div class="movie-meta">
+                        <span class="badge bg-primary me-2">{{ movie.genre }}</span>
+                        <span class="badge bg-secondary me-2">{{ movie.duration }} min</span>
+                        <span class="badge bg-info">{{ movie.release_date.year }}</span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-dark shadow-lg">
+                        <div class="card-body">
+                            <h5 class="card-title">Playback Quality</h5>
+                            <select class="form-select mb-3">
+                                <option value="auto">Auto</option>
+                                <option value="1080p">1080p</option>
+                                <option value="720p">720p</option>
+                                <option value="480p">480p</option>
+                            </select>
+                            <div class="d-grid">
+                                <button class="btn btn-outline-light">
+                                    <i class="bi bi-download me-2"></i>Download
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

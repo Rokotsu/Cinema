@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}{{ movie.title }} - Online Cinema{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <img src="https://via.placeholder.com/400x600" class="img-fluid rounded" alt="{{ movie.title }}">
+    </div>
+    <div class="col-md-8">
+        <h1 class="mb-3">{{ movie.title }}</h1>
+        <div class="d-flex align-items-center mb-3">
+            <span class="badge bg-primary me-2">{{ movie.rating }}/10</span>
+            <span class="badge bg-secondary me-2">{{ movie.duration }} min</span>
+            <span class="badge bg-info">{{ movie.genre }}</span>
+        </div>
+        <p class="lead">{{ movie.description }}</p>
+        <div class="mb-4">
+            <p><strong>Release Date:</strong> {{ movie.release_date.strftime('%B %d, %Y') }}</p>
+            <p><strong>Country:</strong> {{ movie.country }}</p>
+            <p><strong>Age Rating:</strong> {{ movie.age_rating }}+</p>
+        </div>
+        
+        {% if user %}
+            <a href="/movies/{{ movie.id }}/watch" class="btn btn-primary btn-lg mb-4">Watch Now</a>
+        {% else %}
+            <a href="/auth/login" class="btn btn-primary btn-lg mb-4">Login to Watch</a>
+        {% endif %}
+
+        <!-- Reviews Section -->
+        <h3 class="mb-3">Reviews</h3>
+        {% if user %}
+            <form hx-post="/reviews" 
+                  hx-target="#reviews-list"
+                  hx-swap="afterbegin"
+                  class="mb-4">
+                <input type="hidden" name="movie_id" value="{{ movie.id }}">
+                <div class="mb-3">
+                    <label for="rating" class="form-label">Rating</label>
+                    <input type="number" class="form-control" id="rating" name="rating" min="1" max="10" required>
+                </div>
+                <div class="mb-3">
+                    <label for="comment" class="form-label">Comment</label>
+                    <textarea class="form-control" id="comment" name="comment" rows="3" required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Submit Review</button>
+            </form>
+        {% endif %}
+
+        <div id="reviews-list" 
+             hx-get="/reviews/movie/{{ movie.id }}" 
+             hx-trigger="load">
+        </div>
+    </div>
+</div>
+{% endblock %}

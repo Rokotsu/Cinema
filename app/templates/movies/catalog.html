@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}Movie Catalog - Online Cinema{% endblock %}
+
+{% block content %}
+<div class="catalog-header text-center py-5 mb-5 bg-dark-subtle rounded">
+    <h1 class="display-4 mb-3 animate-up">Explore Our Movies</h1>
+    <p class="lead text-muted mb-0 animate-up delay-1">Discover thousands of movies to stream instantly</p>
+</div>
+
+<div class="row">
+    <!-- Filters -->
+    <div class="col-md-3">
+        <div class="card mb-4 shadow-lg hover-lift">
+            <div class="card-body">
+                <h5 class="card-title">Filters</h5>
+                <form hx-get="/movies" 
+                      hx-target="#movies-grid" 
+                      hx-trigger="change"
+                      class="needs-validation">
+                    <div class="mb-3">
+                        <label class="form-label">Genre</label>
+                        <select class="form-select" name="genre">
+                            <option value="">All Genres</option>
+                            <option value="Action">Action</option>
+                            <option value="Comedy">Comedy</option>
+                            <option value="Drama">Drama</option>
+                            <option value="Horror">Horror</option>
+                            <option value="Sci-Fi">Sci-Fi</option>
+                            <option value="Romance">Romance</option>
+                            <option value="Thriller">Thriller</option>
+                            <option value="Documentary">Documentary</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Year</label>
+                        <div class="row">
+                            <div class="col">
+                                <input type="number" class="form-control" name="release_year_from" placeholder="From" min="1900" max="2024">
+                            </div>
+                            <div class="col">
+                                <input type="number" class="form-control" name="release_year_to" placeholder="To" min="1900" max="2024">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Rating</label>
+                        <div class="row">
+                            <div class="col">
+                                <input type="number" class="form-control" name="rating_min" placeholder="Min" min="0" max="10" step="0.1">
+                            </div>
+                            <div class="col">
+                                <input type="number" class="form-control" name="rating_max" placeholder="Max" min="0" max="10" step="0.1">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Sort by</label>
+                        <select class="form-select" name="sort_by">
+                            <option value="release_date">Release Date</option>
+                            <option value="rating">Rating</option>
+                            <option value="title">Title</option>
+                            <option value="popularity">Popularity</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <select class="form-select" name="order">
+                            <option value="desc">Descending</option>
+                            <option value="asc">Ascending</option>
+                        </select>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-filter me-2"></i>Apply Filters
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Quick Links -->
+        <div class="card shadow-lg hover-lift">
+            <div class="card-body">
+                <h5 class="card-title">Quick Links</h5>
+                <div class="d-grid gap-2">
+                    <a href="/movies?sort_by=release_date&order=desc" class="btn btn-outline-primary">
+                        <i class="bi bi-calendar-event me-2"></i>New Releases
+                    </a>
+                    <a href="/movies?sort_by=rating&order=desc" class="btn btn-outline-primary">
+                        <i class="bi bi-star-fill me-2"></i>Top Rated
+                    </a>
+                    <a href="/movies?sort_by=popularity&order=desc" class="btn btn-outline-primary">
+                        <i class="bi bi-graph-up me-2"></i>Popular Now
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Movies Grid -->
+    <div class="col-md-9">
+        <div id="movies-grid" 
+             class="row g-4" 
+             hx-get="/movies" 
+             hx-trigger="load"
+             hx-indicator=".htmx-indicator">
+            <div class="col-12 text-center htmx-indicator">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

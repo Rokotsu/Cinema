@@ -11,7 +11,7 @@ class MovieBase(BaseModel):
     rating: Optional[float] = 0.0
     genre: Optional[str] = None
     country: Optional[str] = None
-    type: Optional[str] = None       # "movie" или "series"
+    type: Optional[str] = None
     age_rating: Optional[int] = None
     required_subscription: Optional[str] = None
 

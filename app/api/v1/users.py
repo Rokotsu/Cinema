@@ -1,16 +1,19 @@
-# File: app/api/v1/users.py
-from fastapi import APIRouter, Depends, HTTPException, status, Response, Form
+from fastapi import APIRouter, Depends, status, Response, Form
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timezone, timedelta
 from pydantic import EmailStr
 from typing import Optional
-
 from app.schemas.users import UserCreate, UserRead, UserUpdate, UserWithSubscription
 from app.services.users_service import UserService
 from app.services.subscriptions_service import SubscriptionService
 from app.schemas.subscriptions import SubscriptionRead
 from app.database.dependencies import get_db_session
-from app.exceptions.custom_exceptions import UserAlreadyExistsException, UserNotFoundException
+from app.exceptions.custom_exceptions import (
+    UserAlreadyExistsException,
+    UserNotFoundException,
+    NoUpdateDataException,
+    AuthenticationException
+)
 from app.core.security import verify_password, create_access_token, get_current_user
 from app.models.users import User
 
@@ -29,14 +32,9 @@ async def create_user(
 ):
     """
     Регистрирует нового пользователя.
-
-    Критически важные поля: email, username и password.
     """
     user_in = UserCreate(email=email, username=username, password=password)
-    try:
-        return await user_service.register_user(db, user_in)
-    except UserAlreadyExistsException as e:
-        raise HTTPException(status_code=e.status_code, detail=e.detail)
+    return await user_service.register_user(db, user_in)
 
 @router.get("/me", response_model=UserWithSubscription)
 async def get_me_info(
@@ -44,8 +42,7 @@ async def get_me_info(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Возвращает информацию о залогиненном пользователе, включая активную подписку (если имеется)
-    и количество оставшихся дней.
+    Возвращает информацию о залогиненном пользователе, включая активную подписку.
     """
     subscription_service = SubscriptionService()
     subscriptions = await subscription_service.list_subscriptions(db, skip=0, limit=100)
@@ -79,14 +76,13 @@ async def login(
 ):
     """
     Авторизует пользователя и возвращает access_token.
-    Ожидает данные формы с полями: username и password.
     """
     try:
         user = await user_service.get_user_by_username(db, username)
     except UserNotFoundException:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Неверные учетные данные")
+        raise AuthenticationException("Неверные учетные данные")
     if not verify_password(password, user.hashed_password):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Неверные учетные данные")
+        raise AuthenticationException("Неверные учетные данные")
     token = create_access_token({"sub": str(user.id)})
     response.set_cookie(
         key="access_token",
@@ -101,7 +97,7 @@ async def login(
 @router.post("/logout")
 async def logout(response: Response):
     """
-    Разлогинивает пользователя, удаляя access_token из cookie.
+    Разлогинивает пользователя.
     """
     response.delete_cookie("access_token")
     return {"message": "Вы успешно разлогинились"}
@@ -109,7 +105,7 @@ async def logout(response: Response):
 @router.post("/confirm_age")
 async def confirm_age(response: Response):
     """
-    Подтверждает возраст пользователя (устанавливает cookie).
+    Подтверждает возраст пользователя.
     """
     response.set_cookie(key="age_confirmed", value="true", httponly=True)
     return {"message": "Возраст подтверждён"}
@@ -123,10 +119,7 @@ async def get_user(
     """
     Возвращает данные пользователя по его идентификатору.
     """
-    try:
-        return await user_service.get_user_by_id(db, user_id)
-    except UserNotFoundException as e:
-        raise HTTPException(status_code=e.status_code, detail=e.detail)
+    return await user_service.get_user_by_id(db, user_id)
 
 @router.put("/{user_id}", response_model=UserRead)
 async def update_user(
@@ -139,7 +132,6 @@ async def update_user(
 ):
     """
     Обновляет данные пользователя.
-    Все поля, кроме идентификатора, являются опциональными.
     """
     update_data = {}
     if email is not None:
@@ -149,9 +141,6 @@ async def update_user(
     if password is not None:
         update_data["password"] = password
     if not update_data:
-        raise HTTPException(status_code=400, detail="Нет данных для обновления")
+        raise NoUpdateDataException()
     user_update = UserUpdate(**update_data)
-    try:
-        return await user_service.update_user(db, user_id, user_update)
-    except UserNotFoundException as e:
-        raise HTTPException(status_code=e.status_code, detail=e.detail)
+    return await user_service.update_user(db, user_id, user_update)

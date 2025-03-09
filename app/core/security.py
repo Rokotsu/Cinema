@@ -1,19 +1,20 @@
-# File: app/core/security.py
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
-
 import jwt
 from passlib.context import CryptContext
-from fastapi import HTTPException, status, Request, Depends
+from fastapi import Request, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.core.config import settings
 from app.database.dependencies import get_db_session
-from app.exceptions.custom_exceptions import UserNotFoundException
+from app.exceptions.custom_exceptions import (
+    UserNotFoundException,
+    AuthenticationException,
+    InvalidTokenException
+)
 from app.models.users import User
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = "Bearer"  # Фиктивное значение; на самом деле мы извлекаем токен из заголовка или куки
+oauth2_scheme = "Bearer"  # Фиктивное значение
 
 def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
@@ -32,8 +33,10 @@ def decode_access_token(token: str) -> Dict[str, Any]:
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         return payload
+    except jwt.ExpiredSignatureError:
+        raise AuthenticationException("Токен истёк. Пожалуйста, авторизуйтесь снова")
     except jwt.PyJWTError:
-        return {}
+        raise InvalidTokenException("Неверный токен. Пожалуйста, проверьте данные авторизации")
 
 async def get_current_user(
     request: Request,
@@ -46,27 +49,11 @@ async def get_current_user(
     else:
         token = request.cookies.get("access_token")
     if not token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Необходима авторизация",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        raise AuthenticationException("Необходима авторизация")
     payload = decode_access_token(token)
     user_id: Optional[str] = payload.get("sub")
     if user_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Неверные учетные данные",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        raise AuthenticationException("Неверные учетные данные")
     from app.services.users_service import UserService
     user_service = UserService()
-    try:
-        user = await user_service.get_user_by_id(db, int(user_id))
-    except UserNotFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Неверные учетные данные",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    return user
+    return await user_service.get_user_by_id(db, int(user_id))

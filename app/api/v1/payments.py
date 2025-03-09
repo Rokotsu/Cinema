@@ -1,5 +1,4 @@
-# File: app/api/v1/payments.py
-from fastapi import APIRouter, Request, HTTPException, Depends, Form
+from fastapi import APIRouter, Request, Depends, Form
 import stripe
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.dependencies import get_db_session
@@ -9,17 +8,18 @@ from app.services.subscriptions_service import SubscriptionService
 from app.schemas.payments import PaymentCreate
 from app.models.payments import PaymentStatus
 from app.schemas.subscriptions import SubscriptionStatus as SubStatus
-from app.exceptions.custom_exceptions import SubscriptionNotFoundException
+from app.exceptions.custom_exceptions import (
+    SubscriptionNotFoundException,
+    StripeWebhookException
+)
 
 router = APIRouter(prefix="/payments", tags=["payments"])
+
 
 @router.post("/stripe/webhook")
 async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db_session)):
     """
     Обработчик вебхука Stripe.
-    После получения события checkout.session.completed обновляется статус платежа до COMPLETED.
-    Если в metadata присутствует subscription_id, осуществляется поиск подписки по id,
-    и если она найдена, её статус обновляется до active.
     """
     payload = await request.body()
     sig_header = request.headers.get("Stripe-Signature")
@@ -29,10 +29,8 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db_ses
         event = stripe.Webhook.construct_event(
             payload=payload, sig_header=sig_header, secret=endpoint_secret
         )
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Некорректное тело запроса")
-    except stripe.error.SignatureVerificationError:
-        raise HTTPException(status_code=400, detail="Некорректная подпись")
+    except (ValueError, stripe.error.SignatureVerificationError) as e:
+        raise StripeWebhookException(str(e))
 
     if event["type"] == "checkout.session.completed":
         session = event["data"]["object"]
@@ -50,20 +48,18 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db_ses
                 pass
     return {"status": "success"}
 
+
 @router.post("/initiate", response_model=dict)
 async def initiate_payment_endpoint(
-    amount: float = Form(..., title="Amount", example=1000.0),
-    currency: str = Form(..., title="Currency", example="RUB"),
-    payment_method: str = Form(..., title="Payment Method", example="card"),
-    user_id: int = Form(..., title="User ID", example=1),
-    subscription_id: int = Form(..., title="Subscription ID", example=123),
-    db: AsyncSession = Depends(get_db_session)
+        amount: float = Form(..., title="Amount", example=1000.0),
+        currency: str = Form(..., title="Currency", example="RUB"),
+        payment_method: str = Form(..., title="Payment Method", example="card"),
+        user_id: int = Form(..., title="User ID", example=1),
+        subscription_id: int = Form(..., title="Subscription ID", example=123),
+        db: AsyncSession = Depends(get_db_session)
 ):
     """
     Инициализирует платеж через Stripe.
-    Создаётся платеж, для которого создается Stripe Checkout Session.
-    В metadata передаются order_id и subscription_id.
-    После успешной оплаты вебхук обновит статус подписки.
     """
     payment_in = PaymentCreate(
         amount=amount,

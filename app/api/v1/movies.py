@@ -62,14 +62,39 @@ async def create_movie(
 @router.get("/", response_model=List[MovieRead])
 async def list_movies(
     db: AsyncSession = Depends(get_db_session),
-    title: str = Query(..., description="Название фильма для поиска", example="thriller")
+    title: Optional[str] = Query(None, description="Название фильма для поиска"),
+    genre: Optional[str] = Query(None, description="Жанр фильма"),
+    country: Optional[str] = Query(None, description="Страна производства"),
+    type_: Optional[str] = Query(None, description="Тип фильма (movie или series)"),
+    release_year_from: Optional[int] = Query(None, description="Год выпуска от"),
+    release_year_to: Optional[int] = Query(None, description="Год выпуска до"),
+    rating_min: Optional[float] = Query(None, description="Минимальный рейтинг"),
+    rating_max: Optional[float] = Query(None, description="Максимальный рейтинг"),
+    sort_by: Optional[str] = Query("release_date", description="Поле для сортировки"),
+    order: Optional[str] = Query("desc", description="Порядок сортировки"),
+    skip: int = Query(0, description="Количество записей для пропуска"),
+    limit: int = Query(100, description="Максимальное количество записей")
 ):
     """
-    Возвращает список фильмов, найденных по названию.
-    Единственный обязательный параметр – название.
+    Возвращает список фильмов по заданным фильтрам.
+    Все параметры являются необязательными – если их не передать, то в запросе просто не будет данных.
     """
-    # Вызываем сервис, передавая только параметр поиска по названию
-    return await movie_service.list_movies(db, search=title)
+    return await movie_service.list_movies(
+        db,
+        genre,
+        country,
+        type_,
+        release_year_from,
+        release_year_to,
+        rating_min,
+        rating_max,
+        title,
+        sort_by,
+        order,
+        skip,
+        limit
+    )
+
 
 @router.get("/{movie_id}", response_model=MovieRead)
 async def get_movie(movie_id: int, db: AsyncSession = Depends(get_db_session)):

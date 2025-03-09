@@ -7,12 +7,16 @@ from alembic import context
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import NullPool
 
+# Добавляем корневой путь проекта
 sys.path.insert(0, dirname(dirname(dirname(abspath(__file__)))))
 
+# Импорт моделей, чтобы они попали в метаданные
 from app.models.users import User
 from app.models.movies import Movie
 from app.models.subscriptions import Subscription
 from app.models.payments import Payment
+from app.models.reviews import Review  # <--- Добавлено, чтобы таблица reviews была в метаданных
+
 from app.database.base import Base
 from app.core.config import settings
 
@@ -31,9 +35,8 @@ engine = create_async_engine(
 
 async def run_migrations_online():
     async with engine.begin() as connection:
-        await connection.run_sync(
-            lambda conn: context.configure(connection=conn, target_metadata=target_metadata)
-        )
+        # Передаём метаданные, включающие модель Review
+        await connection.run_sync(lambda conn: context.configure(connection=conn, target_metadata=target_metadata))
         await connection.run_sync(lambda conn: context.run_migrations())
 
 if context.is_offline_mode():
@@ -47,7 +50,6 @@ if context.is_offline_mode():
         )
         with context.begin_transaction():
             context.run_migrations()
-
     run_migrations_offline()
 else:
     import asyncio

@@ -1,7 +1,9 @@
 # File: app/api/main.py
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.v1 import users, movies, subscriptions, payments, reviews  # добавлен reviews
+from fastapi.staticfiles import StaticFiles
+from app.api.v1 import users, movies, subscriptions, payments, reviews
+from app.routes import html_routes
 
 app = FastAPI(
     title="Онлайн кинотеатр",
@@ -11,8 +13,7 @@ app = FastAPI(
 
 # Подключение CORS, чтобы запросы к API могли приходить из браузера
 origins = [
-    # 3000 - порт, на котором работает фронтенд на React.js
-    "http://localhost:3000",
+    "http://localhost:3000",  # если фронтенд на React, например
 ]
 
 app.add_middleware(
@@ -29,11 +30,19 @@ app.add_middleware(
     ],
 )
 
+# Монтирование статики: файлы из папки "static" будут доступны по /static
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Подключение API-маршрутов
 app.include_router(users.router)
 app.include_router(movies.router)
 app.include_router(subscriptions.router)
 app.include_router(payments.router)
 app.include_router(reviews.router)
+
+# Подключение маршрутов фронтенда (HTML страницы)
+app.include_router(html_routes.router)
+
 @app.get("/success")
 async def payment_success(session_id: str):
     return {"message": "Оплата прошла успешно!", "session_id": session_id}
